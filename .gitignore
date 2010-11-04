@@ -1,0 +1,9 @@
+*.beam
+*~
+rebar
+deps
+deps/*
+deps/hmhj_layer2/*
+deps/mochiweb/*
+deps/webmachine/*
+priv/log/*
