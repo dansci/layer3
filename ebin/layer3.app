@@ -7,7 +7,8 @@
              layer3,
              layer3_app,
              layer3_sup,
-             layer3_resource
+             layer3_resource,
+	     layer3_read
             ]},
   {registered, []},
   {applications, [
@@ -15,7 +16,8 @@
                   stdlib,
                   crypto,
                   mochiweb,
-                  webmachine
+                  webmachine,
+		  hmhj_layer2
                  ]},
   {mod, { layer3_app, []}},
   {env, []}
