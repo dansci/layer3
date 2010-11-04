@@ -9,9 +9,9 @@ init([]) ->
 
 to_html(ReqData, State) ->
     %% FIXME: may break when card or channel wasn't specified in URI
-    Card = wrq:path_info(card, ReqData),
+    Card = list_to_atom(wrq:path_info(card, ReqData)),
     Channel = wrq:path_info(channel, ReqData),
-    
+
     %% FIXME: need support for multiple cards
     hmhj_layer2:process_request(
       #l2request{from=self(), to=Card, action=read}),
@@ -32,7 +32,16 @@ to_html(ReqData, State) ->
 
     %% FIXME: need support for picking out a channel
     
-    {"<html>Data was read.  It'll be listed here soon... </html>",
+    CardDS = [{atom_to_binary(Card, utf8),
+	       {struct, [{<<"timestamp">>, Timestamp}] ++
+		    ChannelDS}}],
+    
+    TotalDS = {struct, CardDS},
+
+
+    Json = layer3_tools:struct_to_json(TotalDS),
+
+    {"<html>" ++ Json ++ "</html>",
      ReqData, State}.
 
 structify_channels({N, V}) ->
