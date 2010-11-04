@@ -9,10 +9,6 @@ struct_to_json({struct, [{Key, Val}]}) ->
     "{" ++ "\"" ++ binary_to_list(Key) ++ "\"" ++  ":" ++
 	struct_to_json(Val) ++ "}";
 
-%% struct_to_json({struct, [{Key, Val} | Rest]}) ->
-%%     "{" ++ "\"" ++ binary_to_list(Key) ++ "\"" ++  ":" ++
-%% 	struct_to_json(Val) ++ "}," ++ struct_to_json(Rest);
-
 struct_to_json({struct, [{Key, Val} | Rest]}) ->
     "{" ++ "\"" ++ binary_to_list(Key) ++ "\"" ++  ":" ++
 	struct_to_json(Val) ++ "," ++ struct_to_json(Rest) ++ "}";

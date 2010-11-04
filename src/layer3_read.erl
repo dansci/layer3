@@ -9,8 +9,9 @@ init([]) ->
 
 to_html(ReqData, State) ->
     %% FIXME: may break when card or channel wasn't specified in URI
+    PathKeys = dict:fetch_keys(wrq:path_info(ReqData)),
     Card = list_to_atom(wrq:path_info(card, ReqData)),
-    Channel = wrq:path_info(channel, ReqData),
+
 
     %% FIXME: need support for multiple cards
     hmhj_layer2:process_request(
@@ -27,17 +28,25 @@ to_html(ReqData, State) ->
     %% Coerce voltages
     NumberedVoltages = lists:zip(lists:seq(1, length(VoltageList)),
 				 VoltageList),
-    ChannelDS = lists:map(fun structify_channels/1,
+    ChannelDS1 = lists:map(fun structify_channels/1,
 			  NumberedVoltages),
 
-    %% FIXME: need support for picking out a channel
-    
+    %% pick out the required channel
+    case lists:member(channel, PathKeys) of 
+	true ->
+	    Channel = wrq:path_info(channel, ReqData),
+	    %% FIXME: check that the channel's there!
+	    ChannelDS = [proplists:lookup(
+			   list_to_binary(Channel), ChannelDS1)];
+	false ->
+	    ChannelDS = ChannelDS1
+    end,
+
     CardDS = [{atom_to_binary(Card, utf8),
 	       {struct, [{<<"timestamp">>, Timestamp}] ++
 		    ChannelDS}}],
     
     TotalDS = {struct, CardDS},
-
 
     Json = layer3_tools:struct_to_json(TotalDS),
 
