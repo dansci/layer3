@@ -8,7 +8,8 @@
              layer3_app,
              layer3_sup,
              layer3_resource,
-	     layer3_read
+	     layer3_read,
+	     layer3_tools
             ]},
   {registered, []},
   {applications, [
