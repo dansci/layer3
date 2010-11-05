@@ -20,7 +20,8 @@ to_html(ReqData, State) ->
 	    {T, Vi} = CardRawData,
 	    case lists:member(channel, PathKeys) of
 		true ->
-		    Channel = wrq:path_info(channel, ReqData),
+		    Channel = list_to_atom(
+				wrq:path_info(channel, ReqData)),
 		    V = select_channel(Channel, Vi);
 		false ->
 		    V = Vi
@@ -44,8 +45,8 @@ to_html(ReqData, State) ->
      ReqData, State}.
 
 structify_channels({N, V}) ->
-    {list_to_binary("channel" ++ integer_to_list(N)),
-     {struct, [{<<"voltage">>, V}]}}.
+    {list_to_atom("channel" ++ integer_to_list(N)),
+     {struct, [{voltage, V}]}}.
 
 %% Returns {Timestamp, [V1, V2, ..., Vn]}
 get_card_data(Card) ->
@@ -68,17 +69,19 @@ get_card_data(Card) ->
 			lists:map(fun structify_channels/1,
 				  NumberedVoltages)};
 	{error, Reason} ->
-	    {error, Reason}.
+	    {error, Reason}
+    end.
+
 	    
 
 %% Returns [Vm] from [V1, V2, ..., Vm, ..., Vn] given arg m
 select_channel(Channel, Voltages) ->
     %% pick out the required channel
-   [proplists:lookup(list_to_binary(Channel), Voltages)].
+   [proplists:lookup(Channel, Voltages)].
 
 %% Forms a data structure for card data containing the supplied
 %% timestamp and list of voltages
 form_card_ds(Card, {Tstamp, Voltages}) ->
-    CardDS = [{atom_to_binary(Card, utf8),
-	       {struct, [{<<"timestamp">>, Tstamp}] ++
+    CardDS = [{Card,
+	       {struct, [{timestamp, Tstamp}] ++
 		    Voltages}}].
