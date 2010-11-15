@@ -26,7 +26,7 @@ to_html(ReqData, State) ->
     CardData = form_card_ds(Card, {T, V}),
     TotalDS = {struct, CardData},
     
-    Json = layer3_tools:struct_to_json(TotalDS),
+    Json = mochijson2:encode(TotalDS),
     
     {"<html>" ++ Json ++ "</html>",
      ReqData, State}.
