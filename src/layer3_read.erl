@@ -6,36 +6,48 @@
 -include_lib("deps/hmhj_layer2/include/l2request.hrl").
 
 init([]) ->
-    {ok, undefined}.
+    {ok, undefined};
+init([channel]) ->
+    {ok, channel}.
 
-to_html(ReqData, State) ->
-    PathDict = wrq:path_info(ReqData),
-    PathKeys = dict:fetch_keys(PathDict),
-    
+
+to_html(ReqData, undefined) ->
     Card = list_to_atom(wrq:path_info(card, ReqData)),
     CardRawData = get_card_data(Card),
-    {T, Vi} = CardRawData,
-    case lists:member(channel, PathKeys) of
-	true ->
-	    Channel = list_to_atom(
-			wrq:path_info(channel, ReqData)),
-	    V = select_channel(Channel, Vi);
-	false ->
-	    V = Vi
-    end,
-    CardData = form_card_ds(Card, {T, V}),
+
+    case CardRawData of
+	{readError, Reason} ->
+	    CardData = form_error_ds(Card, Reason);
+	{T, V} ->
+	    CardData = form_card_ds(Card, {T, V})
+    end,	    
     TotalDS = {struct, CardData},
-    
     Json = mochijson2:encode(TotalDS),
-    
-    {"<html>" ++ Json ++ "</html>",
-     ReqData, State}.
+    {Json, ReqData, undefined};
+
+to_html(ReqData, channel) ->
+    Channel = list_to_atom(
+		wrq:path_info(channel, ReqData)),
+    Card = list_to_atom(wrq:path_info(card, ReqData)),
+    CardRawData = get_card_data(Card),
+
+    case CardRawData of
+	{readError, Reason} ->
+	    CardData = form_error_ds(Card, Reason);
+	{T, Vi} ->
+	    V = select_channel(Channel, Vi),
+	    CardData = form_card_ds(Card, {T, V})
+    end,
+    TotalDS = {struct, CardData},
+    Json = mochijson2:encode(TotalDS),
+    {Json, ReqData, undefined}.
 
 structify_channels({N, V}) ->
+    %% the appending may be inefficient; I don't know a better way
     {list_to_atom("channel" ++ integer_to_list(N)),
      {struct, [{voltage, V}]}}.
 
-%% Returns {Timestamp, [V1, V2, ..., Vn]}
+%% Returns {Timestamp, [V1, V2, ..., Vn]} or {readError, reason}
 get_card_data(Card) ->
     hmhj_layer2:process_request(
       #l2request{from=self(), to=Card, action=read}),
@@ -46,8 +58,7 @@ get_card_data(Card) ->
 
     case Data of
 	{error, Reason} ->
-	    CardData = nil,
-	    {error, Reason};
+	    CardData = {readError, Reason};
 	{Tstamp,VoltageList} ->
 	    {Ms, S, _us} = Tstamp,
 	    Timestamp = 1000000*Ms + S,
@@ -60,18 +71,19 @@ get_card_data(Card) ->
 				  NumberedVoltages)}
     end,
     CardData.
-
-
 	    
 
 %% Returns [Vm] from [V1, V2, ..., Vm, ..., Vn] given arg m
 select_channel(Channel, Voltages) ->
-    %% pick out the required channel
-   [proplists:lookup(Channel, Voltages)].
+    [proplists:lookup(Channel, Voltages)].
 
 %% Forms a data structure for card data containing the supplied
 %% timestamp and list of voltages
 form_card_ds(Card, {Tstamp, Voltages}) ->
-    CardDS = [{Card,
-	       {struct, [{timestamp, Tstamp}] ++
-		    Voltages}}].
+    [{Card,
+      {struct, [{timestamp, Tstamp}] ++
+	   Voltages}}].
+
+form_error_ds(Card, Reason) ->
+    [{Card,
+      {struct, [{readError, Reason}]}}].
