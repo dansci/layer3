@@ -15,22 +15,18 @@ to_html(ReqData, State) ->
     Card = list_to_atom(wrq:path_info(card, ReqData)),
     CardRawData = get_card_data(Card),
 
-    CardData =
+    Struct = 
 	case CardRawData of
 	    {readError, Reason} ->
-		Struct = [{readError, Reason}],
-		form_card_ds(Card, Struct);
+		[{readError, Reason}];
 	    {T, V} when State == undefined ->
-		Struct = [{timestamp, T} | V],
-		form_card_ds(Card, Struct);
+		[{timestamp, T} | V];
 	    {T, Vi} when State == channel ->
 		Channel = list_to_atom(wrq:path_info(channel, ReqData)),
-		%% FIXME: do error handling in case invalid channel
-		%% has been requested
 		V = select_channel(Channel, Vi),
-		Struct = [{timestamp, T} | V],
-		form_card_ds(Card, Struct)
-	end,	    
+		[{timestamp, T} | V]
+	end,
+    CardData = form_card_ds(Card, Struct),
     TotalDS = {struct, CardData},
     Json = mochijson2:encode(TotalDS),
     {Json, ReqData, State}.
@@ -69,7 +65,6 @@ get_card_data(Card) ->
 	    
 
 %% Returns [Vm] from [V1, V2, ..., Vm, ..., Vn] given arg m
-%% FIXME:  crashes if the channel doesn't exist
 select_channel(Channel, Voltages) ->
     Data = proplists:lookup(Channel, Voltages),
     case Data of
