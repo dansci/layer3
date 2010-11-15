@@ -2,4 +2,6 @@
 
 curl -s -i http://localhost:8000/test
 
-curl -s -i http://localhost:8000/data/cardA/channel20
+curl -s -i http://localhost:8000/data/cardA/
+
+curl -s -i http://localhost:8000/data/cardA/channel2
