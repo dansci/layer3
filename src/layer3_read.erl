@@ -11,36 +11,24 @@ init([channel]) ->
     {ok, channel}.
 
 
-to_html(ReqData, undefined) ->
+to_html(ReqData, State) ->
     Card = list_to_atom(wrq:path_info(card, ReqData)),
     CardRawData = get_card_data(Card),
 
-    case CardRawData of
-	{readError, Reason} ->
-	    CardData = form_error_ds(Card, Reason);
-	{T, V} ->
-	    CardData = form_card_ds(Card, {T, V})
-    end,	    
+    CardData =
+	case CardRawData of
+	    {readError, Reason} ->
+		form_error_ds(Card, Reason);
+	    {T, V} when State == undefined ->
+		form_card_ds(Card, {T, V});
+	    {T, Vi} when State == channel ->
+		Channel = wrq:path_info(channel, ReqData),
+		V = select_channel(Channel, Vi),
+		form_card_ds(Card, {T, V})
+	end,	    
     TotalDS = {struct, CardData},
     Json = mochijson2:encode(TotalDS),
-    {Json, ReqData, undefined};
-
-to_html(ReqData, channel) ->
-    Channel = list_to_atom(
-		wrq:path_info(channel, ReqData)),
-    Card = list_to_atom(wrq:path_info(card, ReqData)),
-    CardRawData = get_card_data(Card),
-
-    case CardRawData of
-	{readError, Reason} ->
-	    CardData = form_error_ds(Card, Reason);
-	{T, Vi} ->
-	    V = select_channel(Channel, Vi),
-	    CardData = form_card_ds(Card, {T, V})
-    end,
-    TotalDS = {struct, CardData},
-    Json = mochijson2:encode(TotalDS),
-    {Json, ReqData, undefined}.
+    {Json, ReqData, State}.
 
 structify_channels({N, V}) ->
     %% the appending may be inefficient; I don't know a better way
@@ -54,9 +42,13 @@ get_card_data(Card) ->
 
     receive {R, BinData} ->
 	    Data = binary_to_term(BinData)
+    after 500 ->
+	    Data = timeout
     end,
-
+    
     case Data of
+	timeout ->
+	    CardData = {readError, timeout};
 	{error, Reason} ->
 	    CardData = {readError, Reason};
 	{Tstamp,VoltageList} ->
