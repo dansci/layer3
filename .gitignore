@@ -1,6 +1,5 @@
 *.beam
 *~
-rebar
 deps
 deps/*
 deps/hmhj_layer2/*
