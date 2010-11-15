@@ -71,7 +71,14 @@ get_card_data(Card) ->
 %% Returns [Vm] from [V1, V2, ..., Vm, ..., Vn] given arg m
 %% FIXME:  crashes if the channel doesn't exist
 select_channel(Channel, Voltages) ->
-   [proplists:lookup(Channel, Voltages)].
+    Data = proplists:lookup(Channel, Voltages),
+    case Data of
+	none ->
+	    [{readError, no_such_channel}];
+	_other ->
+	    [Data]
+    end.
+	    
 
 %% Forms a data structure for card data containing the supplied
 %% timestamp and list of voltages
