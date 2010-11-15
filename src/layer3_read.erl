@@ -18,15 +18,18 @@ to_html(ReqData, State) ->
     CardData =
 	case CardRawData of
 	    {readError, Reason} ->
-		form_error_ds(Card, Reason);
+		Struct = [{readError, Reason}],
+		form_card_ds(Card, Struct);
 	    {T, V} when State == undefined ->
-		form_card_ds(Card, {T, V});
+		Struct = [{timestamp, T} | V],
+		form_card_ds(Card, Struct);
 	    {T, Vi} when State == channel ->
 		Channel = list_to_atom(wrq:path_info(channel, ReqData)),
 		%% FIXME: do error handling in case invalid channel
 		%% has been requested
 		V = select_channel(Channel, Vi),
-		form_card_ds(Card, {T, V})
+		Struct = [{timestamp, T} | V],
+		form_card_ds(Card, Struct)
 	end,	    
     TotalDS = {struct, CardData},
     Json = mochijson2:encode(TotalDS),
@@ -72,14 +75,9 @@ select_channel(Channel, Voltages) ->
 
 %% Forms a data structure for card data containing the supplied
 %% timestamp and list of voltages
-form_card_ds(Card, {Tstamp, Voltages}) ->
+form_card_ds(Card, Struct) ->
     [{Card,
-      {struct, [{timestamp, Tstamp}] ++
-	   Voltages}}].
-
-form_error_ds(Card, Reason) ->
-    [{Card,
-      {struct, [{readError, Reason}]}}].
+      {struct, Struct}}].
 
 number_voltages(V) -> 
     lists:zip(lists:seq(1, length(V)), V).
