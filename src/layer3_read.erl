@@ -22,7 +22,9 @@ to_html(ReqData, State) ->
 	    {T, V} when State == undefined ->
 		form_card_ds(Card, {T, V});
 	    {T, Vi} when State == channel ->
-		Channel = wrq:path_info(channel, ReqData),
+		Channel = list_to_atom(wrq:path_info(channel, ReqData)),
+		%% FIXME: do error handling in case invalid channel
+		%% has been requested
 		V = select_channel(Channel, Vi),
 		form_card_ds(Card, {T, V})
 	end,	    
@@ -37,6 +39,8 @@ structify_channels({N, V}) ->
 
 %% Returns {Timestamp, [V1, V2, ..., Vn]} or {readError, reason}
 get_card_data(Card) ->
+    %% in future I may want to keep track of the return value as a
+    %% unique ID.
     hmhj_layer2:process_request(
       #l2request{from=self(), to=Card, action=read}),
 
@@ -48,26 +52,23 @@ get_card_data(Card) ->
     
     case Data of
 	timeout ->
-	    CardData = {readError, timeout};
+	    {readError, timeout};
 	{error, Reason} ->
-	    CardData = {readError, Reason};
+	    {readError, Reason};
 	{Tstamp,VoltageList} ->
 	    {Ms, S, _us} = Tstamp,
 	    Timestamp = 1000000*Ms + S,
 	    %% Coerce voltages
-	    NumberedVoltages = lists:zip(lists:seq(1, 
-						   length(VoltageList)),
-					 VoltageList),
-	    CardData = {Timestamp,
-			lists:map(fun structify_channels/1,
-				  NumberedVoltages)}
-    end,
-    CardData.
+	    NumberedVoltages = number_voltages(VoltageList),
+	    {Timestamp, channels_to_struct(NumberedVoltages)}
+    end.
+
 	    
 
 %% Returns [Vm] from [V1, V2, ..., Vm, ..., Vn] given arg m
+%% FIXME:  crashes if the channel doesn't exist
 select_channel(Channel, Voltages) ->
-    [proplists:lookup(Channel, Voltages)].
+   [proplists:lookup(Channel, Voltages)].
 
 %% Forms a data structure for card data containing the supplied
 %% timestamp and list of voltages
@@ -79,3 +80,9 @@ form_card_ds(Card, {Tstamp, Voltages}) ->
 form_error_ds(Card, Reason) ->
     [{Card,
       {struct, [{readError, Reason}]}}].
+
+number_voltages(V) -> 
+    lists:zip(lists:seq(1, length(V)), V).
+    
+channels_to_struct(V) ->
+    lists:map(fun structify_channels/1, V).
