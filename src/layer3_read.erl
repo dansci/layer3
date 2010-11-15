@@ -6,41 +6,28 @@
 -include_lib("deps/hmhj_layer2/include/l2request.hrl").
 
 init([]) ->
-    io:format("pid is ~p~n", [self()]),
     {ok, undefined}.
 
 to_html(ReqData, State) ->
     PathDict = wrq:path_info(ReqData),
     PathKeys = dict:fetch_keys(PathDict),
     
-    case lists:member(card, PathKeys) of
+    Card = list_to_atom(wrq:path_info(card, ReqData)),
+    CardRawData = get_card_data(Card),
+    {T, Vi} = CardRawData,
+    case lists:member(channel, PathKeys) of
 	true ->
-	    Card = list_to_atom(wrq:path_info(card, ReqData)),
-	    CardRawData = get_card_data(Card),
-	    {T, Vi} = CardRawData,
-	    case lists:member(channel, PathKeys) of
-		true ->
-		    Channel = list_to_atom(
-				wrq:path_info(channel, ReqData)),
-		    V = select_channel(Channel, Vi);
-		false ->
-		    V = Vi
-	    end,
-	    CardData = form_card_ds(Card, {T, V});
+	    Channel = list_to_atom(
+			wrq:path_info(channel, ReqData)),
+	    V = select_channel(Channel, Vi);
 	false ->
-	    Cards = [cardA, cardB, cardC, cardD],
-	    CardsRawData = lists:map(fun get_card_data/1, Cards),
-	    CardsDS = lists:map(fun({C, {T, V}}) ->
-					form_card_ds(C, {T, V}) end,
-				lists:zip(Cards, CardsRawData)),
-	    CardData = lists:foldr(fun(X, Y) ->
-					   X ++ Y end,
-				   [], CardsDS)
+	    V = Vi
     end,
+    CardData = form_card_ds(Card, {T, V}),
     TotalDS = {struct, CardData},
-
+    
     Json = layer3_tools:struct_to_json(TotalDS),
-
+    
     {"<html>" ++ Json ++ "</html>",
      ReqData, State}.
 
@@ -58,6 +45,9 @@ get_card_data(Card) ->
     end,
 
     case Data of
+	{error, Reason} ->
+	    CardData = nil,
+	    {error, Reason};
 	{Tstamp,VoltageList} ->
 	    {Ms, S, _us} = Tstamp,
 	    Timestamp = 1000000*Ms + S,
@@ -67,10 +57,10 @@ get_card_data(Card) ->
 					 VoltageList),
 	    CardData = {Timestamp,
 			lists:map(fun structify_channels/1,
-				  NumberedVoltages)};
-	{error, Reason} ->
-	    {error, Reason}
-    end.
+				  NumberedVoltages)}
+    end,
+    CardData.
+
 
 	    
 
