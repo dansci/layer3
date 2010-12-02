@@ -1,16 +1,18 @@
 -module(hmhj_layer3_read).
--export([init/1, to_html/2]).
+-export([init/1, content_types_provided/2, to_json/2]).
 
 -include_lib("webmachine/include/webmachine.hrl").
--include_lib("deps/hmhj_layer2/include/l2request.hrl").
+-include_lib("l2request.hrl").
 
 init([]) ->
     {ok, undefined};
 init([channel]) ->
     {ok, channel}.
 
+content_types_provided(RD, Context) ->
+    {[{"application/json", to_json}], RD, Context}.
 
-to_html(ReqData, State) ->
+to_json(ReqData, State) ->
     Card = list_to_atom(wrq:path_info(card, ReqData)),
     CardRawData = get_card_data(Card),
 
@@ -54,7 +56,7 @@ get_card_data(Card) ->
 	    {readError, timeout};
 	{error, Reason} ->
 	    {readError, Reason};
-	{Tstamp,VoltageList} ->
+	[Tstamp|VoltageList] ->
 	    {Ms, S, _us} = Tstamp,
 	    Timestamp = 1000000*Ms + S,
 	    %% Coerce voltages
