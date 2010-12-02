@@ -2,7 +2,7 @@
 {application, hmhj_layer3,
  [
   {description, "hmhj_layer3"},
-  {vsn, "1"},
+  {vsn, "0.1"},
   {modules, [
              hmhj_layer3,
              hmhj_layer3_app,
