@@ -1,7 +1,6 @@
 -module(layer3_read).
 -export([init/1, to_html/2]).
 
-
 -include_lib("webmachine/include/webmachine.hrl").
 -include_lib("deps/hmhj_layer2/include/l2request.hrl").
 
@@ -31,20 +30,21 @@ to_html(ReqData, State) ->
     Json = mochijson2:encode(TotalDS),
     {Json, ReqData, State}.
 
-structify_channels({N, V}) ->
-    %% the appending may be inefficient; I don't know a better way
-    {list_to_atom("channel" ++ integer_to_list(N)),
-     {struct, [{voltage, V}]}}.
-
 %% Returns {Timestamp, [V1, V2, ..., Vn]} or {readError, reason}
 get_card_data(Card) ->
     %% in future I may want to keep track of the return value as a
     %% unique ID.
+
     hmhj_layer2:process_request(
       #l2request{from=self(), to=Card, action=read}),
 
-    receive {R, BinData} ->
-	    Data = binary_to_term(BinData)
+    receive {R, PList} ->
+	    Data = case proplists:get_value(read, PList) of
+		       undefined ->
+			   {error, no_read_key};
+		       BinData ->
+			   binary_to_term(BinData)
+		   end,
     after 500 ->
 	    Data = timeout
     end,
@@ -61,8 +61,6 @@ get_card_data(Card) ->
 	    NumberedVoltages = number_voltages(VoltageList),
 	    {Timestamp, channels_to_struct(NumberedVoltages)}
     end.
-
-	    
 
 %% Returns [Vm] from [V1, V2, ..., Vm, ..., Vn] given arg m
 select_channel(Channel, Voltages) ->
@@ -86,3 +84,9 @@ number_voltages(V) ->
     
 channels_to_struct(V) ->
     lists:map(fun structify_channels/1, V).
+
+structify_channels({N, V}) ->
+    %% the appending may be inefficient; I don't know a better way
+    {list_to_atom("channel" ++ integer_to_list(N)),
+     {struct, [{voltage, V}]}}.
+
