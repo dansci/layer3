@@ -2,7 +2,6 @@
 -export([init/1, content_types_provided/2, to_json/2]).
 
 -include_lib("webmachine/include/webmachine.hrl").
--include_lib("l2request.hrl").
 
 init([]) ->
     {ok, undefined};
@@ -34,13 +33,15 @@ to_json(ReqData, State) ->
 
 %% Returns {Timestamp, [V1, V2, ..., Vn]} or {readError, reason}
 get_card_data(Card) ->
-    %% in future I may want to keep track of the return value as a
-    %% unique ID.
 
-    hmhj_layer2:process_request(
-      #l2request{from=self(), to=Card, action=read}),
+    {ok, Req0} = hmhj_layer2:new_request(),
+    {ok, Req1} = hmhj_layer2:set_dest(Req0, Card),
+    {ok, Req2} = hmhj_layer2:set_action(Req1, read),
+    Req = Req2,
+    
+    hmhj_layer2:process_request(Req),
 
-    receive {R, PList} ->
+    receive {_R, PList} ->
     	    Data = case proplists:get_value(read, PList) of
 		       undefined ->
 			   {error, no_read_key};
