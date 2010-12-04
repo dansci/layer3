@@ -33,7 +33,6 @@ to_json(ReqData, State) ->
 
 %% Returns {Timestamp, [V1, V2, ..., Vn]} or {readError, reason}
 get_card_data(Card) ->
-
     {ok, Req0} = hmhj_layer2:new_request(),
     {ok, Req1} = hmhj_layer2:set_dest(Req0, Card),
     {ok, Req2} = hmhj_layer2:set_action(Req1, read),
