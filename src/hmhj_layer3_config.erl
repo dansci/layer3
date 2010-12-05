@@ -30,7 +30,7 @@ send_requests({struct, [CardDS|Rest]}) ->
     %% no error checking to see that the keys are indeed card names
     {CardNo, {struct, Proplist}} = CardDS,
     Payload = form_payload(Proplist),
-    send_l2req(CardNo, configure, Payload),
+    send_l2req(binary_to_atom(CardNo, utf8), configure, Payload),
     send_requests({struct, Rest}).
 
 form_payload(Proplist) ->
@@ -43,7 +43,7 @@ form_payload([{ChannelName, {struct, List}}|T], Acc) ->
     Channel = list_to_integer(NumString),
     %% if the gain wasn't being set, this match will fail
     [{<<"gain">>, Val}] = List,
-    form_payload(T, [{Channel, Val}|Acc]);
+    form_payload(T, [{gain, {Channel, Val}}|Acc]);
 form_payload([{Key, Val}|T], Acc) when is_binary(Key), is_number(Val) ->
     %% this is for things like channel gain sets
     form_payload(T, [{binary_to_atom(Key, utf8), Val}|Acc]);
@@ -62,4 +62,3 @@ send_l2req(Card, Action, PLoad) ->
     receive {_, _} ->
 	    ok
     end.
-

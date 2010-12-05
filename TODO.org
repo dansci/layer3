@@ -1,0 +1,3 @@
+* for version 0.1
+** TODO robustify the config so that it takes any json string as input
+** TODO extend the config to handle error messages
