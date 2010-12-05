@@ -10,6 +10,7 @@
              hmhj_layer3_resource,
 	     hmhj_layer3_read,
 	     hmhj_layer3_config,
+	     hmhj_layer3_write,
 	     hmhj_layer3_tools
             ]},
   {registered, []},
