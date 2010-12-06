@@ -2,6 +2,7 @@
 -export([init/1,
 	 allowed_methods/2,
 	 content_types_provided/2,
+	 malformed_request/2,
 	 process_post/2]).
 
 -include_lib("webmachine/include/webmachine.hrl").
@@ -14,6 +15,17 @@ allowed_methods(ReqData, State) ->
 
 content_types_provided(ReqData, State) ->
     {[{"application/json", process_post}], ReqData, State}.
+
+%% checks for JSON syntax errors
+malformed_request(ReqData, State) ->
+    try mochijson2:decode(wrq:req_body(ReqData)) of
+	_Val ->
+	    {false, ReqData, State}
+    catch
+	_:_ ->
+	    {true, ReqData, State}
+    end.
+	
 
 process_post(ReqData, State) ->
     Body = wrq:req_body(ReqData),
@@ -62,3 +74,4 @@ send_l2req(Card, Action, PLoad) ->
     receive {_, _} ->
 	    ok
     end.
+
