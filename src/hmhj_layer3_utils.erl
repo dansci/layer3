@@ -18,8 +18,10 @@ receive_data(Action) ->
 	    case proplists:get_value(Action, PList) of
 		undefined ->
 		    {error, no_such_key};
-		Binary ->
-		    binary_to_term(Binary)
+		Binary when is_binary(Binary) ->
+		    binary_to_term(Binary);
+		Term ->
+		    Term
 	    end
     after 500 ->
 	    {error, timeout}
@@ -31,7 +33,7 @@ receive_data(Action) ->
 %%  TODO hasn't been tested on errors yet...  This first clause will
 %%  probably have to call process_error or sth like that.
 form_ds(_Action, {error, Reason}) ->
-    {struct, [{error, Reason}]};
+    {struct, [error_to_ds(Reason)]};
 form_ds(read, Term) ->
     data_to_ds(Term);
 form_ds(status, Term) ->
@@ -63,6 +65,21 @@ config_to_ds([{gain, List}|Rest], Acc) ->
 		 [{channel(Ch), {struct, [{gain, Gain}]}}|Acc]);
 config_to_ds([{Parameter, Value}|Rest], Acc) ->
     config_to_ds(Rest, [{Parameter, Value}|Acc]).
+
+error_to_ds({nocard, Slot}) ->
+    {error, {struct, [{nocard, Slot}]}};
+error_to_ds({unsupported_method, {Model, {configure, Par}}}) ->
+    {error, {struct, [{unsupported_method, configure}, 
+		      {model, Model}, {parameter, Par}]}};
+error_to_ds({unsupported_method, {Model, Method}}) ->
+    {error, {struct, [{unsupported_method, Method}, {model, Model}]}};
+error_to_ds({bad_value, {write, Val}}) ->
+    {error, {struct, [{bad_value, Val}]}};
+error_to_ds({bad_value, {configure, {Model, {Par, Val}}}}) ->
+    {error, {struct, [{bad_value, Val}, 
+		      {parameter, Par}, {model, Model}]}};
+error_to_ds(Atom) when is_atom(Atom) ->
+    {error, Atom}.
 
 %% Trivial helper function
 channel(N) when is_integer(N) ->
