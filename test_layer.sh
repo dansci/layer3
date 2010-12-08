@@ -9,10 +9,11 @@ curl -s -i http://localhost:8000/data/cardA/
 # and from cardB
 curl -s -i http://localhost:8000/data/cardB/
 
+# and from cardC
 curl -s -i http://localhost:8000/data/cardC/
 
-# get channel 2 from cardA
-curl -s -i http://localhost:8000/data/cardA/channel2
+# and from a nonexistent card
+curl -s -i http://localhost:8000/data/cardE/
 
 # get config data
 curl -s -i http://localhost:8000/config/cardA

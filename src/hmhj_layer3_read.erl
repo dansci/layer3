@@ -17,4 +17,3 @@ to_json(ReqData, State) ->
     RawData = hmhj_layer3_utils:receive_data(read),
     DS = {struct, [{Card, hmhj_layer3_utils:form_ds(read, RawData)}]},
     {mochijson2:encode(DS), ReqData, State}.
-

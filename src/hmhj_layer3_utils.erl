@@ -31,7 +31,7 @@ receive_data(Action) ->
 %%  TODO hasn't been tested on errors yet...  This first clause will
 %%  probably have to call process_error or sth like that.
 form_ds(_Action, {error, Reason}) ->
-    {struct, {error, Reason}};
+    {struct, [{error, Reason}]};
 form_ds(read, Term) ->
     data_to_ds(Term);
 form_ds(status, Term) ->
