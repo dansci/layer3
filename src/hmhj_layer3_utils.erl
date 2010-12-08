@@ -25,6 +25,11 @@ receive_data(Action) ->
 	    {error, timeout}
     end.
 
+%% Takes the raw return sent back by hmhj_layer2:process_request and
+%% turns it into a data structure mochijson2 can understand.
+
+%%  TODO hasn't been tested on errors yet...  This first clause will
+%%  probably have to call process_error or sth like that.
 form_ds(_Action, {error, Reason}) ->
     {struct, {error, Reason}};
 form_ds(read, Term) ->
@@ -32,6 +37,7 @@ form_ds(read, Term) ->
 form_ds(status, Term) ->
     config_to_ds(Term).
 
+%% turns card data into mochijson2 language
 data_to_ds([{Ms, S, _us}|VList]) ->
     Timestamp = 1000000*Ms + S,
     NumVList = lists:zip(lists:seq(1, length(VList)), VList),
@@ -43,6 +49,7 @@ data_to_ds([{N, V}|Rest], Acc) ->
     data_to_ds(Rest,
 	       [{channel(N), {struct, [{voltage, V}]}}|Acc]).
 
+%% turns config data into mochijson2 language
 config_to_ds(Cfg) ->
     {struct, config_to_ds(Cfg, [])}.
 
@@ -57,5 +64,6 @@ config_to_ds([{gain, List}|Rest], Acc) ->
 config_to_ds([{Parameter, Value}|Rest], Acc) ->
     config_to_ds(Rest, [{Parameter, Value}|Acc]).
 
+%% Trivial helper function
 channel(N) when is_integer(N) ->
     list_to_atom("channel"++integer_to_list(N)).
