@@ -8,28 +8,35 @@ init([]) ->
 init([channel]) ->
     {ok, channel}.
 
-content_types_provided(RD, Context) ->
-    {[{"application/json", to_json}], RD, Context}.
+content_types_provided(ReqData, Context) ->
+    {[{"application/json", to_json}], ReqData, Context}.
+
+%% to_json(ReqData, State) ->
+%%     Card = list_to_atom(wrq:path_info(card, ReqData)),
+%%     CardRawData = get_card_data(Card),
+
+%%     Struct = 
+%% 	case CardRawData of
+%% 	    {readError, Reason} ->
+%% 		[{readError, Reason}];
+%% 	    {T, V} when State == undefined ->
+%% 		[{timestamp, T} | V];
+%% 	    {T, Vi} when State == channel ->
+%% 		Channel = list_to_atom(wrq:path_info(channel, ReqData)),
+%% 		V = select_channel(Channel, Vi),
+%% 		[{timestamp, T} | V]
+%% 	end,
+%%     CardData = form_card_ds(Card, Struct),
+%%     TotalDS = {struct, CardData},
+%%     Json = mochijson2:encode(TotalDS),
+%%     {Json, ReqData, State}.
 
 to_json(ReqData, State) ->
     Card = list_to_atom(wrq:path_info(card, ReqData)),
-    CardRawData = get_card_data(Card),
-
-    Struct = 
-	case CardRawData of
-	    {readError, Reason} ->
-		[{readError, Reason}];
-	    {T, V} when State == undefined ->
-		[{timestamp, T} | V];
-	    {T, Vi} when State == channel ->
-		Channel = list_to_atom(wrq:path_info(channel, ReqData)),
-		V = select_channel(Channel, Vi),
-		[{timestamp, T} | V]
-	end,
-    CardData = form_card_ds(Card, Struct),
-    TotalDS = {struct, CardData},
-    Json = mochijson2:encode(TotalDS),
-    {Json, ReqData, State}.
+    hmhj_layer3_utils:query_card(Card, read),
+    RawData = hmhj_layer3_utils:receive_data(read),
+    DS = {struct, [{Card, hmhj_layer3_utils:form_ds(read, RawData)}]},
+    {mochijson2:encode(DS), ReqData, State}.
 
 %% Returns {Timestamp, [V1, V2, ..., Vn]} or {readError, reason}
 get_card_data(Card) ->

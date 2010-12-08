@@ -17,11 +17,17 @@ content_types_provided(ReqData, State) ->
     {[{"application/json", to_json}], ReqData, State}.
 
 
+%% to_json(ReqData, State) ->
+%%     Card = list_to_atom(wrq:path_info(card, ReqData)),
+%%     CardRawConfig = get_config_data(Card),
+%%     DS = {struct, [{Card, config_to_ds(CardRawConfig)}]},
+%%     {mochijson2:encode(DS), ReqData, State}.
+
 to_json(ReqData, State) ->
     Card = list_to_atom(wrq:path_info(card, ReqData)),
-    CardRawConfig = get_config_data(Card),
-    DS = {struct, [{Card, config_to_ds(CardRawConfig)}]},
-    io:format("ds is ~p~n", [DS]),
+    hmhj_layer3_utils:query_card(Card, status),
+    RawData = hmhj_layer3_utils:receive_data(status),
+    DS = {struct, [{Card, hmhj_layer3_utils:form_ds(status, RawData)}]},
     {mochijson2:encode(DS), ReqData, State}.
 				
 get_config_data(Card) ->
@@ -53,11 +59,8 @@ get_config_data(Card) ->
     end.
 
 
-%% config_to_ds(Cfg) ->
-%%     {struct, config_to_ds(Cfg, [])}.
-
- config_to_ds(Cfg) ->
-     {struct, config_to_ds(Cfg, [])}.
+config_to_ds(Cfg) ->
+    {struct, config_to_ds(Cfg, [])}.
 
 config_to_ds([], Acc) ->
     Acc;
