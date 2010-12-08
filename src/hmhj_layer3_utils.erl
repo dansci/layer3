@@ -44,7 +44,7 @@ data_to_ds([{Ms, S, _us}|VList]) ->
     {struct, data_to_ds(NumVList, [{timestamp, Timestamp}])}.
 
 data_to_ds([], Acc) ->
-    Acc;
+    lists:reverse(Acc);
 data_to_ds([{N, V}|Rest], Acc) ->
     data_to_ds(Rest,
 	       [{channel(N), {struct, [{voltage, V}]}}|Acc]).
@@ -54,7 +54,7 @@ config_to_ds(Cfg) ->
     {struct, config_to_ds(Cfg, [])}.
 
 config_to_ds([], Acc) ->
-    Acc;
+    lists:reverse(Acc);
 config_to_ds([{gain, []}|Rest], Acc) ->
     config_to_ds(Rest, Acc);
 config_to_ds([{gain, List}|Rest], Acc) ->

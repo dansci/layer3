@@ -16,7 +16,7 @@ curl -s -i http://localhost:8000/data/cardC/
 curl -s -i http://localhost:8000/data/cardE/
 
 # get config data
-curl -s -i http://localhost:8000/config/cardA
+curl -s -i http://localhost:8000/config/cardB/
 
 # configure some legit stuff on cards A and B
 curl -vvv -s -X POST -H "Content-Type: application/json" \
