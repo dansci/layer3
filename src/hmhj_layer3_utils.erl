@@ -1,5 +1,5 @@
 -module(hmhj_layer3_utils).
--export([query_card/2, receive_data/1, form_ds/2, form_resp_ds/1]).
+-export([query_card/2, receive_data/1, form_ds/3, form_resp_ds/1]).
 
 %% Card = cardA | cardB | cardC | cardD
 %% Action = read | status
@@ -15,6 +15,8 @@ query_card(Card, Action) ->
 %% returns {error, no_such_key} | {error, timeout} | Term
 receive_data(Action) ->
     receive {_R, PList} ->
+	    %% debug:
+	    io:format("Proplist is ~p~n", [PList]),
 	    case proplists:get_value(Action, PList) of
 		undefined ->
 		    {error, no_such_key};
@@ -27,29 +29,31 @@ receive_data(Action) ->
 	    {error, timeout}
     end.
 
-
-%% FIXME: trying to get config responses dealt with
 form_resp_ds(RespList) when is_list(RespList) ->
+    %% DEBUG:
+    io:format("forming resp ds with ~p~n", [RespList]),
     form_resp_ds(RespList, []).
 
 form_resp_ds([], Acc) ->
     lists:reverse(Acc);
 form_resp_ds([{_Req, ok}|Rest], Acc) ->
-    form_ds(Rest, Acc);
+    form_ds(Rest, Acc, none);
 form_resp_ds([{_Req, Error}|Rest], Acc) ->
-    form_ds(Rest, [form_ds(none, Error)|Acc]).
+    form_ds(Rest, [form_ds(none, Error,none)|Acc], none).
 
 %% Takes the raw return sent back by hmhj_layer2:process_request and
 %% turns it into a data structure mochijson2 can understand.
 
 %%  TODO hasn't been tested on errors yet...  This first clause will
 %%  probably have to call process_error or sth like that.
-form_ds(_Action, {error, Reason}) ->
-    {struct, [{error, error_to_ds(Reason)}]};
-form_ds(read, Term) ->
-    data_to_ds(Term);
-form_ds(status, Term) ->
-    config_to_ds(Term).
+form_ds(_Action, {error, Reason}, _Card) ->
+    {struct, [{error, {struct, [error_to_ds(Reason)]}}]};
+form_ds(read, Term, Card) ->
+    {struct, [{Card, 
+	       data_to_ds(Term)}]};
+form_ds(status, Term, Card) ->
+    {struct, [{Card, 
+	       config_to_ds(Term)}]}.
 
 %% turns card data into mochijson2 language
 data_to_ds([{Ms, S, _us}|VList]) ->

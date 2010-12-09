@@ -20,7 +20,7 @@ curl -s -i http://localhost:8000/config/cardB/
 
 # configure some legit stuff on cards A and B
 curl -vvv -s -X POST -H "Content-Type: application/json" \
-    -d '{"cardA":{"gain": 4, "mode":"differential", "channel1":{"gain":4}, "channel2":{"gain":8}}, "cardB":{"mode":"differential", "channel4":{"gain":4}}}' http://localhost:8000/config
+    -d '{"cardA":{"gain": 4, "mode":"differential", "channel1":{"gain":4}, "channel2":{"gain":8}}}' http://localhost:8000/config
 
 # configure illegit stuff...
 curl -vvv -s -X POST -H "Content-Type: application/json" \

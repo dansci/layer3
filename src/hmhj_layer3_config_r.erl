@@ -20,5 +20,5 @@ to_json(ReqData, State) ->
     Card = list_to_atom(wrq:path_info(card, ReqData)),
     hmhj_layer3_utils:query_card(Card, status),
     RawData = hmhj_layer3_utils:receive_data(status),
-    DS = {struct, [{Card, hmhj_layer3_utils:form_ds(status, RawData)}]},
+    DS = hmhj_layer3_utils:form_ds(status, RawData, Card),
     {mochijson2:encode(DS), ReqData, State}.
