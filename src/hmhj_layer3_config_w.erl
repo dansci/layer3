@@ -30,20 +30,25 @@ malformed_request(ReqData, State) ->
 process_post(ReqData, State) ->
     Body = wrq:req_body(ReqData),
     DataStruct = mochijson2:decode(Body),
-    send_requests(DataStruct),
+    Response = send_requests(DataStruct),
     {true, ReqData, State}.
 
 
 %% I may want to keep track of the return values, if any, given by
 %% layer2
-send_requests({struct, []}) ->
-    ok;
-send_requests({struct, [CardDS|Rest]}) ->
+send_requests(DataStruct) ->
+    send_requests(DataStruct, []).
+
+send_requests({struct, [CardDS|[]]}, Acc) ->
+    lists:reverse(Acc);
+send_requests({struct, [CardDS|Rest]}, Acc) ->
     %% no error checking to see that the keys are indeed card names
     {CardNo, {struct, Proplist}} = CardDS,
     Payload = form_payload(Proplist),
+    %% FIXME get response from l2req
     send_l2req(binary_to_atom(CardNo, utf8), configure, Payload),
-    send_requests({struct, Rest}).
+    %% FIXME append response to accumulator
+    send_requests({struct, Rest})
 
 form_payload(Proplist) ->
     form_payload(Proplist, []).
@@ -71,7 +76,8 @@ send_l2req(Card, Action, PLoad) ->
     {ok, Req3} = hmhj_layer2:set_payload(Req2, PLoad),
     Req = Req3,
     hmhj_layer2:process_request(Req),
-    
+
+    %% FIXME do something with this...
     receive {_, _} ->
 	    ok
     end.

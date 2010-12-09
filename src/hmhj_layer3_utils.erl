@@ -1,5 +1,5 @@
 -module(hmhj_layer3_utils).
--export([query_card/2, receive_data/1, form_ds/2]).
+-export([query_card/2, receive_data/1, form_ds/2, form_resp_ds/1]).
 
 %% Card = cardA | cardB | cardC | cardD
 %% Action = read | status
@@ -27,13 +27,25 @@ receive_data(Action) ->
 	    {error, timeout}
     end.
 
+
+%% FIXME: trying to get config responses dealt with
+form_resp_ds(RespList) when is_list(RespList) ->
+    form_resp_ds(RespList, []).
+
+form_resp_ds([], Acc) ->
+    lists:reverse(Acc);
+form_resp_ds([{_Req, ok}|Rest], Acc) ->
+    form_ds(Rest, Acc);
+form_resp_ds([{_Req, Error}|Rest], Acc) ->
+    form_ds(Rest, [form_ds(none, Error)|Acc]).
+
 %% Takes the raw return sent back by hmhj_layer2:process_request and
 %% turns it into a data structure mochijson2 can understand.
 
 %%  TODO hasn't been tested on errors yet...  This first clause will
 %%  probably have to call process_error or sth like that.
 form_ds(_Action, {error, Reason}) ->
-    {struct, [error_to_ds(Reason)]};
+    {struct, [{error, error_to_ds(Reason)}]};
 form_ds(read, Term) ->
     data_to_ds(Term);
 form_ds(status, Term) ->
@@ -66,20 +78,35 @@ config_to_ds([{gain, List}|Rest], Acc) ->
 config_to_ds([{Parameter, Value}|Rest], Acc) ->
     config_to_ds(Rest, [{Parameter, Value}|Acc]).
 
+%% error_to_ds({nocard, Slot}) ->
+%%     {error, {struct, [{nocard, Slot}]}};
+%% error_to_ds({unsupported_method, {Model, {configure, Par}}}) ->
+%%     {error, {struct, [{unsupported_method, configure}, 
+%% 		      {model, Model}, {parameter, Par}]}};
+%% error_to_ds({unsupported_method, {Model, Method}}) ->
+%%     {error, {struct, [{unsupported_method, Method}, {model, Model}]}};
+%% error_to_ds({bad_value, {write, Val}}) ->
+%%     {error, {struct, [{bad_value, Val}]}};
+%% error_to_ds({bad_value, {configure, {Model, {Par, Val}}}}) ->
+%%     {error, {struct, [{bad_value, Val}, 
+%% 		      {parameter, Par}, {model, Model}]}};
+%% error_to_ds(Atom) when is_atom(Atom) ->
+%%     {error, Atom}.
+
 error_to_ds({nocard, Slot}) ->
-    {error, {struct, [{nocard, Slot}]}};
+    {details, {struct, [{nocard, Slot}]}};
 error_to_ds({unsupported_method, {Model, {configure, Par}}}) ->
-    {error, {struct, [{unsupported_method, configure}, 
-		      {model, Model}, {parameter, Par}]}};
+    {details, {struct, [{unsupported_method, configure}, 
+     {model, Model}, {parameter, Par}]}};
 error_to_ds({unsupported_method, {Model, Method}}) ->
-    {error, {struct, [{unsupported_method, Method}, {model, Model}]}};
+    {details, {struct, [{unsupported_method, Method}, {model, Model}]}};
 error_to_ds({bad_value, {write, Val}}) ->
-    {error, {struct, [{bad_value, Val}]}};
+    {details, {struct, [{bad_value, Val}]}};
 error_to_ds({bad_value, {configure, {Model, {Par, Val}}}}) ->
-    {error, {struct, [{bad_value, Val}, 
-		      {parameter, Par}, {model, Model}]}};
+    {details, {struct, [{bad_value, Val}, 
+			{parameter, Par}, {model, Model}]}};
 error_to_ds(Atom) when is_atom(Atom) ->
-    {error, Atom}.
+    {details, {struct, [{error, Atom}]}}.
 
 %% Trivial helper function
 channel(N) when is_integer(N) ->
