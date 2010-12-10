@@ -1,5 +1,5 @@
 -module(hmhj_layer3_utils).
--export([query_card/2, receive_data/1, form_ds/3, form_resp_ds/1]).
+-export([query_card/2, receive_data/1, form_ds/3, form_config_resp/1]).
 
 %% Card = cardA | cardB | cardC | cardD
 %% Action = read | status
@@ -11,12 +11,23 @@ query_card(Card, Action) ->
     Req = Req2,
     hmhj_layer2:process_request(Req).
 
-%% Action = read | status
+%% TODO: unify configuration block with the Action block
+%% Action = read | status | configure
 %% returns {error, no_such_key} | {error, timeout} | Term
+receive_data(configure) ->
+    receive {_R, Payload} ->
+		   case Payload of
+		Binary when is_binary(Binary) ->
+		    binary_to_term(Binary);
+		Term ->
+		    Term
+	    end
+    after 500 ->
+	    {error, timeout}
+    end;
+
 receive_data(Action) ->
     receive {_R, PList} ->
-	    %% debug:
-	    io:format("Proplist is ~p~n", [PList]),
 	    case proplists:get_value(Action, PList) of
 		undefined ->
 		    {error, no_such_key};
@@ -28,18 +39,6 @@ receive_data(Action) ->
     after 500 ->
 	    {error, timeout}
     end.
-
-form_resp_ds(RespList) when is_list(RespList) ->
-    %% DEBUG:
-    io:format("forming resp ds with ~p~n", [RespList]),
-    form_resp_ds(RespList, []).
-
-form_resp_ds([], Acc) ->
-    lists:reverse(Acc);
-form_resp_ds([{_Req, ok}|Rest], Acc) ->
-    form_ds(Rest, Acc, none);
-form_resp_ds([{_Req, Error}|Rest], Acc) ->
-    form_ds(Rest, [form_ds(none, Error,none)|Acc], none).
 
 %% Takes the raw return sent back by hmhj_layer2:process_request and
 %% turns it into a data structure mochijson2 can understand.
@@ -82,21 +81,20 @@ config_to_ds([{gain, List}|Rest], Acc) ->
 config_to_ds([{Parameter, Value}|Rest], Acc) ->
     config_to_ds(Rest, [{Parameter, Value}|Acc]).
 
-%% error_to_ds({nocard, Slot}) ->
-%%     {error, {struct, [{nocard, Slot}]}};
-%% error_to_ds({unsupported_method, {Model, {configure, Par}}}) ->
-%%     {error, {struct, [{unsupported_method, configure}, 
-%% 		      {model, Model}, {parameter, Par}]}};
-%% error_to_ds({unsupported_method, {Model, Method}}) ->
-%%     {error, {struct, [{unsupported_method, Method}, {model, Model}]}};
-%% error_to_ds({bad_value, {write, Val}}) ->
-%%     {error, {struct, [{bad_value, Val}]}};
-%% error_to_ds({bad_value, {configure, {Model, {Par, Val}}}}) ->
-%%     {error, {struct, [{bad_value, Val}, 
-%% 		      {parameter, Par}, {model, Model}]}};
-%% error_to_ds(Atom) when is_atom(Atom) ->
-%%     {error, Atom}.
+form_config_resp(L1resp) ->
+    form_config_resp(L1resp, []).
 
+form_config_resp([], []) ->
+    ok;
+form_config_resp([], Acc) ->
+    {struct, [{error, {struct, lists:reverse(Acc)}}]};
+form_config_resp([{_Req, ok}|Rest], Acc) ->
+    form_config_resp(Rest, Acc);
+form_config_resp([{Req, Bin}|Rest], Acc) when is_binary(Bin)->
+    form_config_resp([{Req, binary_to_term(Bin)}|Rest], Acc);
+form_config_resp([{_Req, {error, Reason}}|Rest], Acc) ->
+    form_config_resp(Rest, [error_to_ds(Reason)|Acc]).
+			
 error_to_ds({nocard, Slot}) ->
     {details, {struct, [{nocard, Slot}]}};
 error_to_ds({unsupported_method, {Model, {configure, Par}}}) ->
@@ -109,6 +107,9 @@ error_to_ds({bad_value, {write, Val}}) ->
 error_to_ds({bad_value, {configure, {Model, {Par, Val}}}}) ->
     {details, {struct, [{bad_value, Val}, 
 			{parameter, Par}, {model, Model}]}};
+error_to_ds({bad_value, {configure, {Par, Val}}}) ->
+    {details, {struct, [{bad_value, Val}, 
+			{parameter, Par}]}};
 error_to_ds(Atom) when is_atom(Atom) ->
     {details, {struct, [{error, Atom}]}}.
 

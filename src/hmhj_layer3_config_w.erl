@@ -33,7 +33,7 @@ process_post(ReqData, State) ->
     ResponseDS = process_request(DataStruct),
     %% FIXME: hacky check to see if there were any errors.
     NewReqData = case ResponseDS of
-		     [] ->
+		     ok ->
 			 ReqData;
 		     R ->
 			 wrq:append_to_response_body(
@@ -47,13 +47,15 @@ process_request({struct, [CardDS|[]]}) ->
     Payload = form_req_payload(Proplist),
     send_l2req(binary_to_atom(CardNo, utf8), configure, Payload),
     Response = hmhj_layer3_utils:receive_data(configure),
-    hmhj_layer3_utils:form_resp_ds(Response).
+    hmhj_layer3_utils:form_config_resp(Response).
+%% FIXME return an error that would indicate that only one card's
+%% configuration can be done per request.
 
 form_req_payload(Proplist) ->
     form_req_payload(Proplist, []).
 
 form_req_payload([], Acc) ->
-    Acc;
+    lists:reverse(Acc);
 form_req_payload([{ChannelName, {struct, List}}|T], Acc) ->
     "channel" ++ NumString = binary_to_list(ChannelName),
     Channel = list_to_integer(NumString),

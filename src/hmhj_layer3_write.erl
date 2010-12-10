@@ -22,7 +22,6 @@ process_post(ReqData, State) ->
     send_requests(DataStruct),
     {true, ReqData, State}.
 
-
 %% I may want to keep track of the return values, if any, given by
 %% layer2
 send_requests({struct, []}) ->
