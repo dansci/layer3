@@ -16,5 +16,4 @@ to_json(ReqData, State) ->
     hmhj_layer3_utils:query_card(Card, read),
     RawData = hmhj_layer3_utils:receive_data(read),
     DS = hmhj_layer3_utils:form_ds(read, RawData, Card),
-    io:format("data structure is ~p~n", [DS]),
     {mochijson2:encode(DS), ReqData, State}.
